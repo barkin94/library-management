@@ -1,8 +1,4 @@
-import { DataSource, EntityRepository, Repository } from "typeorm";
-import { Book } from "./book.entity";
+import { Book } from "../entities/book";
+import dataSource from '../datasource';
 
-export class BookRepository extends Repository<Book> {
-  // Custom methods can be added here
-  
-}
-
+export const bookRepository = dataSource.getRepository(Book)

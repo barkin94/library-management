@@ -1,10 +1,6 @@
-import { Repository } from "typeorm";
-import { UserEntity } from "../entities/user";
+import { User } from "../entities/user";
+import dataSource from '../datasource';
 
 
-export class UserRepository extends Repository<UserEntity> {
-	
-	getUsers(): UserEntity[] {
+export const userRepository = dataSource.getRepository(User)
 
-	}
-}

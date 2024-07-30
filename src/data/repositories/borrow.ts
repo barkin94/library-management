@@ -1,6 +1,4 @@
-import { Repository } from "typeorm";
-import { BorrowEntity } from "../entities/borrow";
+import { BookBorrow } from "../entities/book-borrow";
+import dataSource from '../datasource';
 
-export class BorrowRepository extends Repository<BorrowEntity> {
-  // Custom methods can be added here
-}
+export const borrowRepository = dataSource.getRepository(BookBorrow);

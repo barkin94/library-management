@@ -4,21 +4,20 @@ import {
   Column,
   ManyToOne,
 } from "typeorm";
-import { UserEntity } from "./user";
-import { BookEntity } from "./book";
-import { Borrow } from "../../entity-types";
+import { User } from "./user";
+import { Book } from "./book";
 
 @Entity()
-export class BorrowEntity {
+export class BookBorrow {
   
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => UserEntity, (user) => user.borrows)
-  user!: UserEntity;
+  @ManyToOne(() => User, (user) => user.borrows)
+  user?: User;
 
-  @ManyToOne(() => BookEntity, (book) => book.borrows)
-  book!: BookEntity;
+  @ManyToOne(() => Book, (book) => book.borrows)
+  book?: Book;
 
   @Column({
     type: "timestamp with time zone",

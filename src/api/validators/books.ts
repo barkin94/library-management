@@ -1,5 +1,5 @@
 import Joi from 'joi';
 
-export const createUserBodySchema = Joi.object({
+export const createBookBodySchema = Joi.object({
   name: Joi.string().required(),
 });

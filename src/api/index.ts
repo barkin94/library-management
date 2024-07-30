@@ -1,14 +1,27 @@
 import express from "express";
-import config from "../config";
-import expressJoiValidation from "express-joi-validation";
+import usersRouter from './routes/users';
+import booksRouter from './routes/books';
+import { getConfig } from "../config";
+import bodyParser from "body-parser";
 
-const validator = expressJoiValidation.createValidator({});
+const { port } = getConfig();
 
-const { port } = config;
 const app = express();
 
-app.get("/users", (req, res) => {
-	getUsers()
+app.use(bodyParser.json())
+app.use('/users', usersRouter);
+app.use('/books', booksRouter);
+
+app.listen(port, () => {
+	console.log(`Listening on port ${port}`)
 });
 
-app.listen(port, () => console.log(port));
+export default app;
+// let serverInitPromise = new Promise<typeof app>((resolve) => {
+// 	app.listen(port, () => {
+// 		console.log(`Listening on port ${port}`)
+// 		resolve(app);
+// 	});
+// });
+
+// export default serverInitPromise;

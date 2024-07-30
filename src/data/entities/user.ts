@@ -2,22 +2,19 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
   OneToMany,
 } from "typeorm";
-import { Borrow, User } from "../../entity-types";
-import { BorrowEntity } from "./borrow";
+import { BookBorrow } from "./book-borrow";
 
 @Entity()
-export class UserEntity{
+export class User{
   @PrimaryGeneratedColumn()
   id!: number;
 
   @Column()
   name!: string;
 
-  @OneToMany(() => BorrowEntity, (borrow) => borrow.user)
-  borrows!: BorrowEntity[];
+  @OneToMany(() => BookBorrow, (borrow) => borrow.user)
+  borrows?: BookBorrow[];
 }
 
