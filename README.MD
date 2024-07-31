@@ -20,7 +20,7 @@ Create a temporary Postgre instance with the command below. (Or you may use your
 docker compose up -d
 ```
 
-Run the application.
+Run the application. No migrations needed. TypeORM will automatically load the tables based on the entity definitions in the code.
 ```bash
 npm run start:dev
 ```
