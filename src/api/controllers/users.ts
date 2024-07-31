@@ -1,10 +1,22 @@
 import { Request, Response } from "express";
-import { userRepository } from "../../data/repositories/user";
-import { borrowRepository } from "../../data/repositories/borrow";
 import { BookBorrow } from "../../data/entities/book-borrow";
-import { bookRepository } from "../../data/repositories/book";
-import { IsNull } from "typeorm";
+import { IsNull, Repository } from "typeorm";
 import { User } from "../../data/entities/user";
+import { Book } from "../../data/entities/book";
+
+let bookRepository: Repository<Book>
+let userRepository: Repository<User>
+let bookBorrowRepository: Repository<BookBorrow>
+
+export const constructUsersController = (
+  bookRepo: Repository<Book>,
+  userRepo: Repository<User>,
+  bookBorrowRepo: Repository<BookBorrow>
+) => {
+  bookRepository = bookRepo;
+  userRepository = userRepo;
+  bookBorrowRepository = bookBorrowRepo;
+}
 
 export const getUserById = async (req: Request, res: Response) => {
   const user = await userRepository.findOne({
@@ -78,7 +90,7 @@ export const borrowBook = async (req: Request, res: Response) => {
   }
 
   const isBookUnvailable =
-    await borrowRepository.findOne({
+    await bookBorrowRepository.findOne({
       where: {
         book: { id: parseInt(req.params.bookId) },
         returnedAt: IsNull()
@@ -95,13 +107,13 @@ export const borrowBook = async (req: Request, res: Response) => {
   const borrow = new BookBorrow();
   borrow.book = book;
   borrow.user = user;
-  await borrowRepository.save(borrow);
+  await bookBorrowRepository.save(borrow);
   
   res.status(204).json();
 }
 
 export const returnBook = async (req: Request, res: Response) => {
-  const borrow = await borrowRepository.findOne({
+  const borrow = await bookBorrowRepository.findOne({
     where: {
       user: { id: parseInt(req.params.userId) },
       book: { id: parseInt(req.params.bookId) },
@@ -121,7 +133,7 @@ export const returnBook = async (req: Request, res: Response) => {
   borrow.rating = req.body.score;
   borrow.returnedAt = new Date();
 
-  await borrowRepository.save(borrow)
+  await bookBorrowRepository.save(borrow)
 
   res.status(204).json();
 }

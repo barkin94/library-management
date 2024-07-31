@@ -1,6 +1,12 @@
 import { Request, Response } from "express";
-import { bookRepository } from "../../data/repositories/book";
 import { Book } from "../../data/entities/book";
+import { Repository } from "typeorm";
+
+let bookRepository: Repository<Book>
+
+export const constructBooksController = (bookRepo: Repository<Book>) => {
+  bookRepository = bookRepo;
+}
 
 export const getBookByIdWithAverageScore = async (req: Request, res: Response) => {
   const result = await bookRepository

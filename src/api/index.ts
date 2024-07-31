@@ -4,19 +4,24 @@ import booksRouter from './routes/books';
 import { getConfig } from "../config";
 import bodyParser from "body-parser";
 
-const { port } = getConfig();
+let app: express.Express
 
-const app = express();
+export const initExpress = () => {
+	const { port } = getConfig();
 
-app.use(bodyParser.json())
-app.use('/users', usersRouter);
-app.use('/books', booksRouter);
+	app = express();
 
-app.listen(port, () => {
-	console.log(`Listening on port ${port}`)
-});
+	app.use(bodyParser.json())
+	app.use('/users', usersRouter);
+	app.use('/books', booksRouter);
 
-export default app;
+	app.listen(port, () => {
+		console.log(`Listening on port ${port}`)
+	});
+}
+
+export const getExpressApp = () => app
+
 // let serverInitPromise = new Promise<typeof app>((resolve) => {
 // 	app.listen(port, () => {
 // 		console.log(`Listening on port ${port}`)
