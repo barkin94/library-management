@@ -72,7 +72,7 @@ export const createUser = async (req: Request, res: Response) => {
   res.status(201).json();
 };
 
-
+// TODO: needs rework
 export const borrowBook = async (req: Request, res: Response) => {
   const [user, book] = await Promise.all([
     userRepository.findOneBy({ id: parseInt(req.params.userId)}),

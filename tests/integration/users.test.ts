@@ -3,7 +3,7 @@ import { PostgreSqlContainer, StartedPostgreSqlContainer } from "@testcontainers
 import request from 'supertest';
 import { overrideConfig } from '../../src/config';
 import { Express } from 'express'
-import { borrowBook, createUser, getUserById, getUsers } from '../../src/api/controllers/users';
+import { borrowBook, createUser, getUserById, getUsers, returnBook } from '../../src/api/controllers/users';
 import { getExpressApp } from '../../src/api';
 
 describe("Users controller integration tests", () => {
@@ -33,7 +33,7 @@ describe("Users controller integration tests", () => {
         await new Promise((res) => setTimeout(res, 3000))
     });
 
-    afterEach(async () => {
+    beforeEach(async () => {
         await postgresClient.query('DELETE FROM public.book_borrow WHERE true;');
         await postgresClient.query('DELETE FROM public.user WHERE true;');
         await postgresClient.query('DELETE FROM public.book WHERE true;');
@@ -93,6 +93,82 @@ describe("Users controller integration tests", () => {
                     present: [{ name: 'Dune' }]
                 }
             })
+        })
+    })
+
+    describe(borrowBook.name, () => {
+        // TOOD: test invalid request params
+
+        
+        it('should return 404 if user is not found', async () => {
+            await postgresClient.query('INSERT INTO public.book (id, name) VALUES (1, \'Dune\');');
+
+            const response = await request(app).post('/users/1/borrow/1')
+            
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('user not found')
+
+        })
+
+        it('should return 404 if book is not found', async () => {
+            await postgresClient.query('INSERT INTO public.user (id, name) VALUES (1, \'John Doe\');');
+
+            const response = await request(app).post('/users/1/borrow/1')
+            
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('book not found')
+        })
+
+        // it('should return 403 if book is not available', async () => {
+        //     await postgresClient.query('INSERT INTO public.user (id, name) VALUES (1, \'John Doe\');');
+        //     await postgresClient.query('INSERT INTO public.book (id, name) VALUES (1, \'Dune\');');
+        //     await postgresClient.query('INSERT INTO public.book_borrow (id, user_id, book_id) VALUES (1, 1, 1);')
+
+        //     const response = await request(app).post('/users/1/borrow/1')
+            
+        //     expect(response.status).toEqual(403);
+        //     expect(response.body.message).toEqual('book is unavailable')
+        // })
+    })
+
+    describe(returnBook.name, () => {
+
+        //TODO: test invalid request body
+
+        it('should return 403 for already returned books', async () => {
+            await postgresClient.query('INSERT INTO public.user (id, name) VALUES (1, \'John Doe\');');
+            await postgresClient.query('INSERT INTO public.book (id, name) VALUES (1, \'Dune\');');
+            await postgresClient.query('INSERT INTO public.book_borrow (id, user_id, book_id, returned_at, rating) VALUES (1, 1, 1, CURRENT_TIMESTAMP, 8);')
+
+            const response = await request(app)
+                .post('/users/1/return/1')
+                .send({
+                    score: 9
+                })
+            
+            expect(response.status).toEqual(403);
+            expect(response.body.message).toEqual('already returned');
+
+        })
+
+
+        it('should return a book', async () => {
+            await postgresClient.query('INSERT INTO public.user (id, name) VALUES (1, \'John Doe\');');
+            await postgresClient.query('INSERT INTO public.book (id, name) VALUES (1, \'Dune\');');
+            await postgresClient.query('INSERT INTO public.book_borrow (id, user_id, book_id) VALUES (1, 1, 1);')
+
+
+            const response = await request(app)
+                .post('/users/1/return/1')
+                .send({
+                    score: 9
+                })
+
+            const borrow = (await postgresClient.query('SELECT * FROM public.book_borrow WHERE id = 1')).rows[0];
+            
+            expect(response.status).toEqual(204);
+            expect(borrow.rating).toEqual(9);
+            expect(borrow.returned_at).toBeDefined();
         })
     })
 });
