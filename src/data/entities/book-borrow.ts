@@ -4,6 +4,7 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { User } from "./user";
 import { Book } from "./book";
@@ -16,10 +17,12 @@ export class BookBorrow {
 
   @ManyToOne(() => User, (user) => user.borrows)
   @JoinColumn({ name: "user_id" })
+  @Index()
   user?: User;
 
   @ManyToOne(() => Book, (book) => book.borrows)
   @JoinColumn({ name: "book_id", })
+  @Index()
   book?: Book;
 
   @Column({

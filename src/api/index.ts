@@ -22,11 +22,3 @@ export const initExpress = () => {
 
 export const getExpressApp = () => app
 
-// let serverInitPromise = new Promise<typeof app>((resolve) => {
-// 	app.listen(port, () => {
-// 		console.log(`Listening on port ${port}`)
-// 		resolve(app);
-// 	});
-// });
-
-// export default serverInitPromise;
