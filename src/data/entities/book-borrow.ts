@@ -17,12 +17,10 @@ export class BookBorrow {
 
   @ManyToOne(() => User, (user) => user.borrows)
   @JoinColumn({ name: "user_id" })
-  @Index()
   user?: User;
 
   @ManyToOne(() => Book, (book) => book.borrows)
   @JoinColumn({ name: "book_id", })
-  @Index()
   book?: Book;
 
   @Column({

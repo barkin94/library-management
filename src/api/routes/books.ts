@@ -1,15 +1,13 @@
 import { Router } from "express";
 
-import expressJoiValidation from "express-joi-validation";
-import { createBookBodySchema } from "../validators/books";
 import { createBook, getBookByIdWithAverageScore, getBooks } from "../controllers/books";
-
-const validator = expressJoiValidation.createValidator();
+import { nameSchema, validator } from "../validators/common";
+import { idSchema } from "../validators/common";
 
 const router = Router();
 
 router.get("/", getBooks);
-router.get("/:id", getBookByIdWithAverageScore);
-router.post("/",  validator.body(createBookBodySchema), createBook)
+router.get("/:id", validator.params(idSchema), getBookByIdWithAverageScore);
+router.post("/",  validator.body(nameSchema), createBook)
 
 export default router;
