@@ -1,6 +1,6 @@
 # library-management
 
-This is a simple Node.js application to manage libraries. It exposes endpoints that can add create/view users and books, and record book borrow and returns. Project's stack is Typescript, Express.js, PostgreSQL (TypeORM)
+This is a simple Node.js application to manage libraries. It exposes endpoints that can add create/view users and books, and record book borrow and returns. Project's stack is Typescript, Express.js, PostgreSQL (TypeORM). Due to the simplicity of application logic, service layer isn't implemented.
 
 ## Installation
 
