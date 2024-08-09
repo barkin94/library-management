@@ -3,18 +3,22 @@ import { BookBorrow } from "../../data/entities/book-borrow";
 import { IsNull, Repository } from "typeorm";
 import { User } from "../../data/entities/user";
 import { Book } from "../../data/entities/book";
+import { BookReturn } from "../../data/entities/book-return";
 
-let bookRepository: Repository<Book>
-let userRepository: Repository<User>
-let bookBorrowRepository: Repository<BookBorrow>
+let bookRepository: Repository<Book>;
+let userRepository: Repository<User>;
+let bookBorrowRepository: Repository<BookBorrow>;
+let bookReturnRepository: Repository<BookReturn>;
 
 export const constructUsersController = (
   bookRepo: Repository<Book>,
   userRepo: Repository<User>,
-  bookBorrowRepo: Repository<BookBorrow>
+  bookBorrowRepo: Repository<BookBorrow>,
+  bookReturnRepo: Repository<BookReturn>
 ) => {
   bookRepository = bookRepo;
   userRepository = userRepo;
+  bookReturnRepository = bookReturnRepo;
   bookBorrowRepository = bookBorrowRepo;
 }
 
@@ -23,7 +27,8 @@ export const getUserById = async (req: Request, res: Response) => {
     where: { id: parseInt(req.params.id) },
     relations: {
       borrows: {
-        book: true
+        book: true,
+        bookReturn: true
       }
     }
   });
@@ -37,12 +42,12 @@ export const getUserById = async (req: Request, res: Response) => {
 
   while(user.borrows!.length) {
     const borrow = user.borrows!.pop()!;
+    const bookReturn = borrow.bookReturn;
     const bookData = {
       name: borrow.book!.name,
-      userScore: borrow.rating ?? undefined
+      userScore: bookReturn?.rating ?? undefined
     }
-
-    borrow.returnedAt
+    bookReturn
       ? past.push(bookData)
       : present.push(bookData);
   }
@@ -76,7 +81,19 @@ export const createUser = async (req: Request, res: Response) => {
 export const borrowBook = async (req: Request, res: Response) => {
   const [user, book] = await Promise.all([
     userRepository.findOneBy({ id: parseInt(req.params.userId)}),
-    bookRepository.findOneBy({ id: parseInt(req.params.bookId)}),
+    bookRepository.findOne({
+      where: {
+        id: parseInt(req.params.bookId),
+        borrows: {
+          bookReturn: IsNull()
+        }
+      },
+      relations: {
+        borrows: {
+          bookReturn: true
+        }
+      },
+    }),
   ]);
 
   if(!user) {
@@ -89,21 +106,11 @@ export const borrowBook = async (req: Request, res: Response) => {
     return;
   }
 
-  const isBookUnvailable =
-    await bookBorrowRepository.findOne({
-      where: {
-        book: { id: parseInt(req.params.bookId) },
-        returnedAt: IsNull()
-      },
-      relations: {
-        book: true,
-      }
-    })
-
-  if(isBookUnvailable) {
+  if(book.borrows.length) {
     res.status(403).json({ message: "book is unavailable" })
+    return;
   }
-
+  
   const borrow = new BookBorrow();
   borrow.book = book;
   borrow.user = user;
@@ -113,27 +120,42 @@ export const borrowBook = async (req: Request, res: Response) => {
 }
 
 export const returnBook = async (req: Request, res: Response) => {
+  // bookRepository.findOne({
+  //   where: {
+  //     id: parseInt(req.params.bookId),
+  //     borrows: {
+  //       user: { id: parseInt(req.params.userId) },
+  //       bookReturn: IsNull()
+  //     }
+  //   },
+  //   relations: {
+  //     borrows: true
+  //   },
+  // }),
+
   const borrow = await bookBorrowRepository.findOne({
     where: {
       user: { id: parseInt(req.params.userId) },
       book: { id: parseInt(req.params.bookId) },
-      returnedAt: IsNull()
+      bookReturn: IsNull()
     },
-    relations: {
-      book: true,
-      user: true
-    }
+   relations: {
+     book: true,
+     user: true,
+     bookReturn: true
+  }
   })
 
   if(!borrow) {
-    res.status(403).json({ message: "already returned" });
+    res.status(403).json({ message: "not eligible for return" });
     return;
   }
 
-  borrow.rating = req.body.score;
-  borrow.returnedAt = new Date();
-
-  await bookBorrowRepository.save(borrow)
+  const bookReturn = new BookReturn();
+  bookReturn.rating = req.body.score;
+  bookReturn.returnedAt = new Date();
+  bookReturn.bookBorrow = borrow;
+  await bookReturnRepository.save(borrow)
 
   res.status(204).json();
 }

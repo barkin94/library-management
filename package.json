@@ -2,6 +2,7 @@
   "name": "library-management",
   "version": "1.0.0",
   "scripts": {
+    "typeorm": "tsc && typeorm -d dist/src/data/datasource.js",
     "test": "jest",
     "start:dev": "ts-node src/main.ts",
     "build": "tsc"
@@ -32,7 +33,6 @@
     "express-joi-validation": "^5.0.1",
     "joi": "^17.13.3",
     "pg": "^8.12.0",
-    "typeorm": "^0.3.20",
-    "typeorm-ts-node-commonjs": "^0.3.20"
+    "typeorm": "^0.3.20"
   }
 }

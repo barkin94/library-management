@@ -3,6 +3,8 @@ import {
   PrimaryGeneratedColumn,
   Column,
   OneToMany,
+  JoinColumn,
+  Relation
 } from "typeorm";
 import { BookBorrow } from "./book-borrow";
 
@@ -15,6 +17,7 @@ export class Book {
   @Column()
   name!: string;
 
-  @OneToMany(() => BookBorrow, (borrow) => borrow.book)
-  borrows?: BookBorrow[];
+  @OneToMany(() => BookBorrow, (bookBorrow) => bookBorrow.book)
+  @JoinColumn({ name: 'book_borrow_id' })
+  borrows!: BookBorrow[];
 }

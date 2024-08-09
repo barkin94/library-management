@@ -1,13 +1,13 @@
 import {
   Entity,
   PrimaryGeneratedColumn,
-  Column,
   ManyToOne,
   JoinColumn,
-  Index,
+  OneToOne,
 } from "typeorm";
 import { User } from "./user";
 import { Book } from "./book";
+import { BookReturn } from "./book-return";
 
 @Entity()
 export class BookBorrow {
@@ -23,13 +23,7 @@ export class BookBorrow {
   @JoinColumn({ name: "book_id", })
   book?: Book;
 
-  @Column({
-    name: 'returned_at',
-    type: "timestamp with time zone",
-    nullable: true
-  })
-  returnedAt?: Date;
-
-  @Column({type: "int", nullable: true })
-  rating?: number;
+/*   @OneToOne(() => BookReturn, (bookReturn) => bookReturn.bookBorrow)
+  @JoinColumn({ name: 'book_return_id' }) */
+  bookReturn?: BookReturn;
 }

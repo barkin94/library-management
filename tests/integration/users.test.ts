@@ -21,7 +21,7 @@ describe("Users controller integration tests", () => {
         overrideConfig({
             db: {
                 connectionString,
-                logging: false
+                logging: true
             }
         })
 
@@ -34,9 +34,16 @@ describe("Users controller integration tests", () => {
     });
 
     beforeEach(async () => {
-        await postgresClient.query('DELETE FROM public.book_borrow WHERE true;');
-        await postgresClient.query('DELETE FROM public.user WHERE true;');
-        await postgresClient.query('DELETE FROM public.book WHERE true;');
+        await postgresClient.query(`
+            DELETE FROM public.book_return WHERE true;
+            DELETE FROM public.book_borrow WHERE true;
+            DELETE FROM public.user WHERE true;
+            DELETE FROM public.book WHERE true
+        `);
+        // await postgresClient.query('DELETE FROM public.book_return WHERE true;');
+        // await postgresClient.query('DELETE FROM public.book_borrow WHERE true;');
+        // await postgresClient.query('DELETE FROM public.user WHERE true;');
+        // await postgresClient.query('DELETE FROM public.book WHERE true;');
     })
 
     afterAll(async () => {
@@ -77,10 +84,11 @@ describe("Users controller integration tests", () => {
 
     describe(getUserById.name, () => {
         it('should return user with book borrowing history', async () => {
-            await postgresClient.query('INSERT INTO public.user (id, name) VALUES (1, \'John Doe\');');
+            await postgresClient.query(`INSERT INTO public.user (id, name) VALUES (1, \'John Doe\');`);
             await postgresClient.query('INSERT INTO public.book (id, name) VALUES (1, \'Dune\'),(2, \'Harry Potter\');');
             await postgresClient.query('INSERT INTO public.book_borrow (id, user_id, book_id) VALUES (1, 1, 1);')
-            await postgresClient.query('INSERT INTO public.book_borrow (id, user_id, book_id, returned_at, rating) VALUES (2, 1, 2, CURRENT_TIMESTAMP, 8);')
+            await postgresClient.query('INSERT INTO public.book_borrow (id, user_id, book_id) VALUES (2, 1, 2);')
+            await postgresClient.query('INSERT INTO public.book_return (id, returned_at, rating, book_borrow_id) VALUES (1, CURRENT_TIMESTAMP, 8, 2);')
 
             const response = await request(app).get('/users/1')
             
@@ -111,7 +119,9 @@ describe("Users controller integration tests", () => {
         })
 
         it('should return 404 if book is not found', async () => {
-            await postgresClient.query('INSERT INTO public.user (id, name) VALUES (1, \'John Doe\');');
+            await postgresClient.query(`
+                INSERT INTO public.user (id, name) VALUES (1, 'John Doe');
+            `);
 
             const response = await request(app).post('/users/1/borrow/1')
             
@@ -119,16 +129,41 @@ describe("Users controller integration tests", () => {
             expect(response.body.message).toEqual('book not found')
         })
 
-        // it('should return 403 if book is not available', async () => {
-        //     await postgresClient.query('INSERT INTO public.user (id, name) VALUES (1, \'John Doe\');');
-        //     await postgresClient.query('INSERT INTO public.book (id, name) VALUES (1, \'Dune\');');
-        //     await postgresClient.query('INSERT INTO public.book_borrow (id, user_id, book_id) VALUES (1, 1, 1);')
+        it('should return 403 if book is not available', async () => {
+            await postgresClient.query(`
+                INSERT INTO public.user (id, name) VALUES (1, 'John Doe');
+                INSERT INTO public.book (id, name) VALUES (1, 'Dune');
+                INSERT INTO public.book_borrow (id, user_id, book_id) VALUES (1, 1, 1);
+            `);
+            // await postgresClient.query('INSERT INTO public.user (id, name) VALUES (1, \'John Doe\');');
+            // await postgresClient.query('INSERT INTO public.book (id, name) VALUES (1, \'Dune\');');
+            // await postgresClient.query('INSERT INTO public.book_borrow (id, user_id, book_id) VALUES (1, 1, 1);')
 
-        //     const response = await request(app).post('/users/1/borrow/1')
+            const response = await request(app).post('/users/1/borrow/1')
             
-        //     expect(response.status).toEqual(403);
-        //     expect(response.body.message).toEqual('book is unavailable')
-        // })
+            expect(response.status).toEqual(403);
+            expect(response.body.message).toEqual('book is unavailable')
+        })
+
+
+        it('should return 204 when book is borrowed', async () => {
+            await postgresClient.query(`
+                INSERT INTO public.user (id, name) VALUES (1, 'John Doe');
+                INSERT INTO public.book (id, name) VALUES (1, 'Dune');
+            `);
+            // await postgresClient.query('INSERT INTO public.user (id, name) VALUES (1, \'John Doe\');');
+            // await postgresClient.query('INSERT INTO public.book (id, name) VALUES (1, \'Dune\');');
+
+            const response = await request(app).post('/users/1/borrow/1')
+
+            const createdBorrow = (await postgresClient.query(`
+                SELECT * FROM public.book_borrow WHERE id = 1 AND user_id = 1 AND book_id = 1;
+            `)).rows[0];
+            
+            expect(response.status).toEqual(204);
+            expect(response.body.message).toBeUndefined();
+            expect(createdBorrow).toBeDefined();
+        })
     })
 
     describe(returnBook.name, () => {
@@ -138,7 +173,8 @@ describe("Users controller integration tests", () => {
         it('should return 403 for already returned books', async () => {
             await postgresClient.query('INSERT INTO public.user (id, name) VALUES (1, \'John Doe\');');
             await postgresClient.query('INSERT INTO public.book (id, name) VALUES (1, \'Dune\');');
-            await postgresClient.query('INSERT INTO public.book_borrow (id, user_id, book_id, returned_at, rating) VALUES (1, 1, 1, CURRENT_TIMESTAMP, 8);')
+            await postgresClient.query('INSERT INTO public.book_borrow (id, user_id, book_id) VALUES (1, 1, 1);')
+            await postgresClient.query('INSERT INTO public.book_return (id, book_borrow_id, returned_at, rating) VALUES (1, 1, CURRENT_TIMESTAMP, 8);')
 
             const response = await request(app)
                 .post('/users/1/return/1')
