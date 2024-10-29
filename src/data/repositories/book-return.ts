@@ -1,10 +1,19 @@
-import { BookReturn } from "../entities/book-return";
-import { DataSource, Repository } from "typeorm";
+import { EntityManager, EntityRepository, sql } from "@mikro-orm/postgresql";
+import { BookBorrow } from '../mikroorm/entities/book-borrow';
+import { getMikroORM } from "../mikroorm/entity-manager";
+import { BookReturn } from "../mikroorm/entities/book-return";
 
-let repository: Repository<BookReturn>;
+let repository: EntityRepository<BookReturn>
+let em: EntityManager;
 
-export const constructBookReturnsRepository = (ds: DataSource) => {
-    repository = ds.getRepository(BookReturn);
+(async () => {
+    const orm = await getMikroORM();
+    em = orm.em;
+    repository = em.getRepository(BookReturn);
+})()
+
+const save = async (bookReturn: BookReturn) => repository.create(bookReturn)
+
+export default {
+    save
 }
-
-export const getBookReturnsRepository = () => repository;

@@ -1,3 +1,5 @@
+import 'reflect-metadata';
+
 import express from "express";
 import usersRouter from './routes/users';
 import booksRouter from './routes/books';
@@ -6,7 +8,7 @@ import bodyParser from "body-parser";
 
 let app: express.Express
 
-export const initExpress = () => {
+const init = () => {
 	const { port } = getConfig();
 
 	app = express();
@@ -20,5 +22,10 @@ export const initExpress = () => {
 	});
 }
 
-export const getExpressApp = () => app
+const getExpressApp = () => app
+
+export default {
+	init,
+	getExpressApp
+}
 

@@ -1,11 +1,41 @@
-import { User } from "../entities/user";
-import { DataSource, Repository } from "typeorm";
+import { EntityRepository } from "@mikro-orm/core";
+import { User } from "../mikroorm/entities/user";
+import { getMikroORM } from "../mikroorm/entity-manager";
 
-let repository: Repository<User>;
+let repository: EntityRepository<User>;
 
-export const constructUsersRepository = (ds: DataSource) => {
-    repository = ds.getRepository(User)
+(async () => {
+  const mikroorm = await getMikroORM();
+  repository = mikroorm.em.getRepository(User);
+})()
+
+const getUserById = async (id: string) => {
+  const result = await repository.findOne(id, {
+    populate: ['borrows.book', 'borrows.bookReturn']
+  })
+
+  if(!result)
+    return null;
+
+  return {
+    ...result,
+    borrows: result.borrows.toArray(),
+  }
 }
 
-export const getUsersRepository = () => repository;
+const findAll = () => {
+  return repository.findAll()
+};
 
+const createUser = async (params: { name: string }) => {
+  const user = new User();
+  user.name = params.name;
+
+  return repository.insert(user);
+}
+
+export default {
+  getUserById,
+  findAll,
+  createUser
+}

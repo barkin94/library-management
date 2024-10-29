@@ -1,10 +1,31 @@
-import { BookBorrow } from "../entities/book-borrow";
-import { DataSource, Repository } from "typeorm";
+import { EntityManager, EntityRepository, sql } from "@mikro-orm/postgresql";
+import { BookBorrow } from '../mikroorm/entities/book-borrow';
+import { getMikroORM } from "../mikroorm/entity-manager";
 
-let repository: Repository<BookBorrow>;
+let repository: EntityRepository<BookBorrow>
+let em: EntityManager;
 
-export const constructBookBorrowsRepository = (ds: DataSource) => {
-    repository = ds.getRepository(BookBorrow)
+(async () => {
+    const orm = await getMikroORM();
+    em = orm.em;
+    repository = em.getRepository(BookBorrow);
+})()
+
+const findOneByUserIdAndBookIdWhereBookReturnIsNull = async (userId: string, bookId: string) => {
+    return repository.findOne(
+        {
+            book: { id: bookId },
+            user: { id: userId },
+            bookReturn: { $exists: false }
+        },
+        {
+            populate: ['book', 'user', 'bookReturn']
+        })
 }
 
-export const getBookBorrowsRepository = () => repository;
+const save = async (bookReturn: BookBorrow) => em.persistAndFlush(bookReturn)
+
+export default {
+    findOneByUserIdAndBookIdWhereBookReturnIsNull,
+    save
+}

@@ -1,23 +1,8 @@
 import { Request, Response } from "express";
-import { Book } from "../../data/entities/book";
-import { Repository } from "typeorm";
-
-let bookRepository: Repository<Book>
-
-export const constructBooksController = (bookRepo: Repository<Book>) => {
-  bookRepository = bookRepo;
-}
+import bookRepository from '../../data/repositories/book'
 
 export const getBookByIdWithAverageScore = async (req: Request, res: Response) => {
-  const result = await bookRepository
-    .createQueryBuilder('book')
-    .leftJoin('book.borrows', 'borrow')
-    .where('book.id = :bookId', { bookId: req.params.id })
-    .groupBy('book.id')
-    .select('book.id', 'id')
-    .addSelect('book.name', 'name')
-    .addSelect('AVG(borrow.rating)', 'score')
-    .getRawOne<{ id: string, name: string, score: number }>();
+   const result = await bookRepository.getBookByIdWithAverageScore(req.params.id);
 
   if(!result) {
     res.status(404).json({ message: "book not found" });
@@ -31,13 +16,11 @@ export const getBookByIdWithAverageScore = async (req: Request, res: Response) =
 };
 
 export const getBooks = async (req: Request, res: Response) => {
-  res.json(await bookRepository.find());
+  res.json(bookRepository.findAll());
 };
 
 export const createBook = async (req: Request, res: Response) => {
-  const book = new Book();
-  book.name = req.body.name;
-  await bookRepository.save(book);
-
+  bookRepository.createBook(req.body.name)
   res.status(201).json();
 };
+

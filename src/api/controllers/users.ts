@@ -1,37 +1,15 @@
 import { Request, Response } from "express";
-import { BookBorrow } from "../../data/entities/book-borrow";
-import { IsNull, Repository } from "typeorm";
-import { User } from "../../data/entities/user";
-import { Book } from "../../data/entities/book";
-import { BookReturn } from "../../data/entities/book-return";
 
-let bookRepository: Repository<Book>;
-let userRepository: Repository<User>;
-let bookBorrowRepository: Repository<BookBorrow>;
-let bookReturnRepository: Repository<BookReturn>;
-
-export const constructUsersController = (
-  bookRepo: Repository<Book>,
-  userRepo: Repository<User>,
-  bookBorrowRepo: Repository<BookBorrow>,
-  bookReturnRepo: Repository<BookReturn>
-) => {
-  bookRepository = bookRepo;
-  userRepository = userRepo;
-  bookReturnRepository = bookReturnRepo;
-  bookBorrowRepository = bookBorrowRepo;
-}
+import userRepository from "../../data/repositories/user";
+import bookBorrowRepository from '../../data/repositories/book-borrow';
+import bookReturnRepository from '../../data/repositories/book-return';
+import bookRepository from '../../data/repositories/book';
+import { BookBorrow } from "../../data/mikroorm/entities/book-borrow";
+import { BookReturn } from "../../data/mikroorm/entities/book-return";
+import { User } from "../../data/mikroorm/entities/user";
 
 export const getUserById = async (req: Request, res: Response) => {
-  const user = await userRepository.findOne({
-    where: { id: parseInt(req.params.id) },
-    relations: {
-      borrows: {
-        book: true,
-        bookReturn: true
-      }
-    }
-  });
+  const user = await userRepository.getUserById(req.params.id);
 
   if (!user) {
     return res.status(404).json({ message: "User not found" });
@@ -41,11 +19,11 @@ export const getUserById = async (req: Request, res: Response) => {
   const present = [];
 
   while(user.borrows!.length) {
-    const borrow = user.borrows!.pop()!;
+    const borrow = user.borrows.pop()!;
     const bookReturn = borrow.bookReturn;
     const bookData = {
       name: borrow.book!.name,
-      userScore: bookReturn?.rating ?? undefined
+      userScore: bookReturn?.rating
     }
     bookReturn
       ? past.push(bookData)
@@ -63,7 +41,7 @@ export const getUserById = async (req: Request, res: Response) => {
 };
 
 export const getUsers = async (req: Request, res: Response) => {
-  const users = await userRepository.find();
+  const users = await userRepository.findAll();
 
   res.json(users);
 };
@@ -72,34 +50,14 @@ export const createUser = async (req: Request, res: Response) => {
   const user = new User();
   user.name = req.body.name;
 
-  await userRepository.save(user);
+  await userRepository.createUser(user);
 
   res.status(201).json();
 };
 
 // TODO: needs rework
 export const borrowBook = async (req: Request, res: Response) => {
-  const [user, book] = await Promise.all([
-    userRepository.findOneBy({ id: parseInt(req.params.userId)}),
-    bookRepository.findOne({
-      where: {
-        id: parseInt(req.params.bookId),
-        borrows: {
-          bookReturn: IsNull()
-        }
-      },
-      relations: {
-        borrows: {
-          bookReturn: true
-        }
-      },
-    }),
-  ]);
-
-  if(!user) {
-    res.status(404).json({ message: "user not found" });
-    return;
-  }
+  const book = await bookRepository.findOneByIdWhereBookReturnIsNull(req.params.bookId); 
 
   if(!book) {
     res.status(404).json({ message: "book not found" })
@@ -113,38 +71,15 @@ export const borrowBook = async (req: Request, res: Response) => {
   
   const borrow = new BookBorrow();
   borrow.book = book;
-  borrow.user = user;
+
   await bookBorrowRepository.save(borrow);
   
   res.status(204).json();
 }
 
 export const returnBook = async (req: Request, res: Response) => {
-  // bookRepository.findOne({
-  //   where: {
-  //     id: parseInt(req.params.bookId),
-  //     borrows: {
-  //       user: { id: parseInt(req.params.userId) },
-  //       bookReturn: IsNull()
-  //     }
-  //   },
-  //   relations: {
-  //     borrows: true
-  //   },
-  // }),
-
-  const borrow = await bookBorrowRepository.findOne({
-    where: {
-      user: { id: parseInt(req.params.userId) },
-      book: { id: parseInt(req.params.bookId) },
-      bookReturn: IsNull()
-    },
-   relations: {
-     book: true,
-     user: true,
-     bookReturn: true
-  }
-  })
+  const { userId, bookId } = req.body;
+  const borrow = await bookBorrowRepository.findOneByUserIdAndBookIdWhereBookReturnIsNull(userId, bookId)
 
   if(!borrow) {
     res.status(403).json({ message: "not eligible for return" });
@@ -155,7 +90,7 @@ export const returnBook = async (req: Request, res: Response) => {
   bookReturn.rating = req.body.score;
   bookReturn.returnedAt = new Date();
   bookReturn.bookBorrow = borrow;
-  await bookReturnRepository.save(borrow)
+  await bookReturnRepository.save(bookReturn)
 
   res.status(204).json();
 }
