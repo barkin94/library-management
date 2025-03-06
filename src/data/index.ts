@@ -1,6 +1,6 @@
-import { initMikroOrm } from "./mikroorm/entity-manager";
+import { initDrizzle } from "./drizzle";
 
-const init = initMikroOrm;
+const init = initDrizzle;
 
 export default {
     init

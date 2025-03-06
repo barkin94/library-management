@@ -1,37 +1,29 @@
-import { EntityRepository } from "@mikro-orm/core";
-import { User } from "../mikroorm/entities/user";
-import { getMikroORM } from "../mikroorm/entity-manager";
+import { eq } from "drizzle-orm";
+import { usersTable } from "../drizzle/schemas/user";
+import { getDb } from "../drizzle";
 
-let repository: EntityRepository<User>;
+const db = getDb();
 
-(async () => {
-  const mikroorm = await getMikroORM();
-  repository = mikroorm.em.getRepository(User);
-})()
-
-const getUserById = async (id: string) => {
-  const result = await repository.findOne(id, {
-    populate: ['borrows.book', 'borrows.bookReturn']
-  })
-
-  if(!result)
-    return null;
-
-  return {
-    ...result,
-    borrows: result.borrows.toArray(),
-  }
+const getUserById = async (id: number) => {
+  return db.query.usersTable.findFirst({
+    where: eq(usersTable.id, id),
+    with: {
+      borrows: {
+        with: {
+          book: true,
+          bookReturn: true
+        }
+      }
+    }
+  }).execute()
 }
 
 const findAll = () => {
-  return repository.findAll()
+  return db.query.usersTable.findMany();
 };
 
 const createUser = async (params: { name: string }) => {
-  const user = new User();
-  user.name = params.name;
-
-  return repository.insert(user);
+  return db.insert(usersTable).values({ name: params.name });
 }
 
 export default {

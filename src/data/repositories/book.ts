@@ -1,41 +1,24 @@
-import { EntityManager, EntityRepository, sql } from "@mikro-orm/postgresql";
-import { Book } from '../mikroorm/entities/book';
-import { getMikroORM } from "../mikroorm/entity-manager";
+import { and, avg, eq, exists, isNull, not } from "drizzle-orm";
+import { getDb } from "../drizzle";
+import { bookBorrowsTable, bookReturnsTable, booksTable } from "../drizzle/schemas";
 
-let repository: EntityRepository<Book>
-let em: EntityManager;
+const db = getDb();
 
-(async () => {
-  const orm = await getMikroORM();
-  em = orm.em;
-  repository = em.getRepository(Book);
-})()
+const getBookByIdWithAverageScore = async (bookId: number) =>  {
+  const queryResult = await db
+    .select({
+      score: avg(bookReturnsTable.rating).mapWith(Number),
+      name: booksTable.name,
+      id: booksTable.id
+    })
+    .from(booksTable)
+    .leftJoin(bookBorrowsTable, eq(booksTable.id, bookBorrowsTable.bookId))
+    .innerJoin(bookReturnsTable, eq(bookBorrowsTable.id, bookReturnsTable.bookBorrowId))
+    .where(eq(booksTable.id, bookId))
+    .groupBy(booksTable.id)
+    .execute()
 
-const getBookByIdWithAverageScore = async (bookId: string) =>  {
-
-  // repository.findOne(bookId, {
-  //   populate: ['borrows']
-  // })
-  // repository
-  //   .createQueryBuilder('book')
-  //   .leftJoin('book.borrows', 'borrow')
-  //   .where({ 'book.id': bookId })
-  //   .groupBy('book.id')    
-  //   .execute<{ id: string, name: string, score: number }>();
-
-  const asd = await em.qb(Book, 'book')
-    .select([
-      'AVG(borrow.rating) AS score',
-      'book.id AS id',
-      'book.name AS name'
-    ])
-    .leftJoin('book.borrows', 'borrow')
-    .where({ 'book.id': bookId })
-    .groupBy('book.id')
-    .execute<{ id: string, name: string, score: number }>('all')
-  //asd.execute()
-
-  return asd;
+  return queryResult[0]
   // await bookRepository
   //   .createQueryBuilder('book')
   //   .leftJoin('book.borrows', 'borrow')
@@ -48,27 +31,40 @@ const getBookByIdWithAverageScore = async (bookId: string) =>  {
 }
 
 const findAll = () => {
-  return repository.findAll();
+  return db.query.booksTable.findMany();
 }
 
 const createBook = (name: string) => {
-  const book = new Book();
-  book.name = name;
-  return repository.create(book);
+  return db.insert(booksTable).values({ name });
 }
 
-const findOneByIdWhereBookReturnIsNull = (bookId: string) =>
-  repository.findOne(
-    {
-      id: bookId,
+const findOneByIdWhereBookReturnIsNull = (bookId: number) =>
+  db.query.booksTable.findFirst({
+    with: {
       borrows: {
-        bookReturn: { $exists: false }
+        with: {
+          book: true,
+          bookReturn: true
+        }
       }
     },
-    {
-      populate: ['borrows', 'borrows.bookReturn']
-    }
-  );
+    where:
+      and(
+        eq(booksTable.id, bookId),
+        isNull(booksTable)
+      ),
+  })
+  // repository.findOne(
+  //   {
+  //     id: bookId,
+  //     borrows: {
+  //       bookReturn: { $exists: false }
+  //     }
+  //   },
+  //   {
+  //     populate: ['borrows', 'borrows.bookReturn']
+  //   }
+  // );
  
 
 export default {

@@ -1,31 +1,35 @@
-import { EntityManager, EntityRepository, sql } from "@mikro-orm/postgresql";
-import { BookBorrow } from '../mikroorm/entities/book-borrow';
-import { getMikroORM } from "../mikroorm/entity-manager";
+import { getDb } from "../drizzle";
+import { bookBorrowsTable } from "../drizzle/schemas/book_borrow";
+import { booksTable } from "../drizzle/schemas/book";
+import { and, eq, isNull } from "drizzle-orm";
+import { usersTable } from "../drizzle/schemas/user";
+import { bookReturnsTable } from "../drizzle/schemas/book_return";
 
-let repository: EntityRepository<BookBorrow>
-let em: EntityManager;
+const db = getDb();
 
-(async () => {
-    const orm = await getMikroORM();
-    em = orm.em;
-    repository = em.getRepository(BookBorrow);
-})()
+const findOneByUserIdAndBookIdWhereBookReturnIsNull = async (userId: number, bookId: number) => {
+    const result = await db
+        .select().from(bookBorrowsTable)
+        .innerJoin(booksTable, eq(bookBorrowsTable.bookId, booksTable.id))
+        .innerJoin(usersTable, eq(bookBorrowsTable.userId, usersTable.id))
+        .leftJoin(bookReturnsTable, eq(bookBorrowsTable.id, bookReturnsTable.bookBorrowId))
+        .where(
+            and(
+                eq(booksTable.id, bookId),
+                eq(usersTable.id, userId), 
+                isNull(bookReturnsTable.bookBorrowId), 
+            )
+        )
+        .execute();
 
-const findOneByUserIdAndBookIdWhereBookReturnIsNull = async (userId: string, bookId: string) => {
-    return repository.findOne(
-        {
-            book: { id: bookId },
-            user: { id: userId },
-            bookReturn: { $exists: false }
-        },
-        {
-            populate: ['book', 'user', 'bookReturn']
-        })
+    return result[0];
 }
 
-const save = async (bookReturn: BookBorrow) => em.persistAndFlush(bookReturn)
+const create = (params: { userId: number, bookId: number }) => {
+    return db.insert(bookBorrowsTable).values(params);
+}
 
 export default {
     findOneByUserIdAndBookIdWhereBookReturnIsNull,
-    save
+    create
 }

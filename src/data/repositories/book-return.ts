@@ -1,19 +1,16 @@
-import { EntityManager, EntityRepository, sql } from "@mikro-orm/postgresql";
-import { BookBorrow } from '../mikroorm/entities/book-borrow';
-import { getMikroORM } from "../mikroorm/entity-manager";
-import { BookReturn } from "../mikroorm/entities/book-return";
+import { getDb } from "../drizzle";
+import { bookReturnsTable } from "../drizzle/schemas";
 
-let repository: EntityRepository<BookReturn>
-let em: EntityManager;
+const db = getDb();
 
-(async () => {
-    const orm = await getMikroORM();
-    em = orm.em;
-    repository = em.getRepository(BookReturn);
-})()
+const create = (params: { rating: number, bookBorrowId: number }) => {
+    return db.insert(bookReturnsTable).values({ 
+        ...params,
+        returnedAt: new Date().toISOString()
+    });
+}
 
-const save = async (bookReturn: BookReturn) => repository.create(bookReturn)
 
 export default {
-    save
+    create
 }

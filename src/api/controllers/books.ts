@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import bookRepository from '../../data/repositories/book'
 
 export const getBookByIdWithAverageScore = async (req: Request, res: Response) => {
-   const result = await bookRepository.getBookByIdWithAverageScore(req.params.id);
+   const result = await bookRepository.getBookByIdWithAverageScore(parseInt(req.params.id));
 
   if(!result) {
     res.status(404).json({ message: "book not found" });
